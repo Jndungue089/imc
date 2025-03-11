@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+void main() async {
+  await Hive.initFlutter();
+  await Hive.openBox('imcBox');
   runApp(IMCCalculatorApp());
 }
 
@@ -26,7 +30,7 @@ class IMCCalculatorScreen extends StatefulWidget {
 class _IMCCalculatorScreenState extends State<IMCCalculatorScreen> {
   final TextEditingController pesoController = TextEditingController();
   final TextEditingController alturaController = TextEditingController();
-  List<String> resultados = [];
+  Box imcBox = Hive.box('imcBox');
 
   void calcularIMC() {
     double peso = double.tryParse(pesoController.text) ?? 0.0;
@@ -36,9 +40,10 @@ class _IMCCalculatorScreenState extends State<IMCCalculatorScreen> {
       double imc = peso / (altura * altura);
       String classificacao = obterClassificacao(imc);
 
-      setState(() {
-        resultados.insert(0, 'IMC: ${imc.toStringAsFixed(2)} - $classificacao');
-      });
+      String resultado = 'IMC: ${imc.toStringAsFixed(2)} - $classificacao';
+      imcBox.add(resultado);
+
+      setState(() {});
     }
   }
 
@@ -79,11 +84,22 @@ class _IMCCalculatorScreenState extends State<IMCCalculatorScreen> {
             ),
             SizedBox(height: 20),
             Expanded(
-              child: ListView.builder(
-                itemCount: resultados.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(resultados[index]),
+              child: ValueListenableBuilder(
+                valueListenable: imcBox.listenable(),
+                builder: (context, box, _) {
+                  return ListView.builder(
+                    itemCount: box.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(box.getAt(index)),
+                        trailing: IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            box.deleteAt(index);
+                          },
+                        ),
+                      );
+                    },
                   );
                 },
               ),
